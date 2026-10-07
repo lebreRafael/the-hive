@@ -27,14 +27,29 @@ export function droppedPaths(files: readonly File[]): string[] {
 }
 
 /**
+ * C0, DEL and C1. A file name may hold any of them, and none is text to a
+ * terminal: ESC can close bracketed paste early (`ESC [ 201 ~`) and type the
+ * rest of the name as keystrokes, and a newline submits the line.
+ */
+const holdsControl = (path: string): boolean =>
+  Array.from(path).some((char) => {
+    const code = char.codePointAt(0) ?? 0;
+    return code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+  });
+
+/**
  * Single-quote each path for a POSIX shell, joined by spaces, with one space
  * after the last so the next word can be typed straight away.
  *
- * Single quotes make every character inert except `'` itself, which closes
- * the quote, is escaped, and reopens it (`'\''`). `null` for no paths, so a
- * drop that carried nothing usable pastes nothing rather than a lone space.
+ * Single quotes make every character inert *to the shell* except `'` itself,
+ * which closes the quote, is escaped, and reopens it (`'\''`). They do nothing
+ * for the terminal, which reads the bytes first, so a path holding a control
+ * character is left out whole — not stripped, because a stripped path names a
+ * different file. `null` when nothing is left, so a drop that carried nothing
+ * usable pastes nothing rather than a lone space.
  */
 export function quoteDroppedPaths(paths: readonly string[]): string | null {
-  if (paths.length === 0) return null;
-  return `${paths.map((path) => `'${path.replaceAll("'", "'\\''")}'`).join(' ')} `;
+  const safe = paths.filter((path) => !holdsControl(path));
+  if (safe.length === 0) return null;
+  return `${safe.map((path) => `'${path.replaceAll("'", "'\\''")}'`).join(' ')} `;
 }

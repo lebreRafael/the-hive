@@ -119,7 +119,10 @@ conflict. VS Code draws the same line in the same place.
 
 Dragging files from Finder onto a live terminal types their paths at the
 caret, the way a macOS terminal does: each one single-quoted (`'` inside a
-path becomes `'\''`), space-separated, with one trailing space. Same shape as
+path becomes `'\''`), space-separated, with one trailing space. A path holding
+a control character (C0, DEL or C1) is left out whole: quoting is for the
+shell, and the terminal reads the bytes first, so an `ESC [ 201 ~` in a file
+name would otherwise close bracketed paste and type the rest. Same shape as
 file links: the surface takes **one opaque prop**, `dropText(files)`, and
 pastes whatever string it answers through `terminal.paste`, never
 `transport.write`, so bracketed paste is honoured and Claude Code sees one
